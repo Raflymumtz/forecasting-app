@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 200px;
+      background-color: #ffffff;
+      height: 100vh;
+      border-right: 1px solid #ccc;
+    }
+
+    .sidebar-header {
+      background-color: #fdfdfd;
+      padding: 20px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .sidebar-title {
+      font-size: 16px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 12px 20px;
+      color: #333;
+      text-decoration: none;
+    }
+
+    .sidebar a.active,
+    .sidebar a:hover {
+      background: #dceeff;
+    }
+
+    .logout {
+      background: #dc3545;
+      color: white !important;
+      text-align: center;
+      display: inline-block;
+      padding: 10px;
+      margin-top: 30px;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+
+    .content {
+      padding: 20px;
+      flex-grow: 1;
+    }
+
+    .header {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-box {
+      background-color: #ffffff;
+      color: #000;
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #ccc;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .stat-box .value {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .stat-box .text {
+      font-size: 14px;
+    }
+
+    .chart-container {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .chart-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .pie-box,
+    .bar-box {
+      width: 25%;
+    }
+
+    .table-box {
+      width: 30%;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">RSIA</span>
+      <img src="{{ url_for('static', filename='icons/rs.gif') }}" width="40">
+    </div>
+
+    <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint.startswith('dashboard') %}active{% endif %}">Dashboard</a>
+
+    {% if current_user.is_authenticated and current_user.role is not none %}
+      {% if current_user.role.name == 'admin' %}
+        <a href="{{ url_for('user.index') }}">User</a>
+        <a href="{{ url_for('role.index') }}">Hak Akses</a>
+        <a href="{{ url_for('obat.index') }}">Obat</a>
+        <a href="{{ url_for('permintaan.index') }}">Permintaan</a>
+        <a href="{{ url_for('penggunaan.index') }}">Penggunaan Obat</a>
+        <a href="{{ url_for('resep.index') }}">Resep</a>
+        <a href="{{ url_for('peramalan.index') }}">Peramalan</a>
+
+      {% elif current_user.role.name == 'petugas' %}
+        <a href="{{ url_for('obat.index') }}">Obat</a>
+        <a href="{{ url_for('permintaan.index') }}">Permintaan</a>
+        <a href="{{ url_for('resep.index') }}">Resep</a>
+      
+      {% elif current_user.role.name == 'dokter' %}
+        <a href="{{ url_for('permintaan.index') }}">Permintaan</a>
+        <a href="{{ url_for('penggunaan.index') }}">Penggunaan Obat</a>
+        <a href="{{ url_for('resep.index') }}">Resep</a>
+      {% elif current_user.role.name == 'pasien' %}
+      
+      {% endif %}
+    {% endif %}
+
+    <a href="{{ url_for('auth.logout') }}" class="logout">Logout</a>
+  </div>
+
+  <div class="content">
+    <div class="header">Dashboard</div>
+
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div>
+          <div class="value">{{ total_obat }}</div>
+          <div class="text">Total Obat</div>
+        </div>
+        <img src="{{ url_for('static', filename='icons/pill.gif') }}" width="40">
+      </div>
+      <div class="stat-box">
+        <div>
+          <div class="value">{{ obat_kadaluarsa }}</div>
+          <div class="text">Obat Kadaluarsa</div>
+        </div>
+        <img src="{{ url_for('static', filename='icons/kadaluarsa.gif') }}" width="45">
+      </div>
+      <div class="stat-box">
+        <div>
+          <div class="value">{{ obat_habis }}</div>
+          <div class="text">Obat Habis</div>
+        </div>
+        <img src="{{ url_for('static', filename='icons/empty.gif') }}" width="45">
+      </div>
+      <div class="stat-box">
+        <div>
+          <div class="value">{{ total_transaksi }}</div>
+          <div class="text">Total Transaksi</div>
+        </div>
+        <img src="{{ url_for('static', filename='icons/shopping.gif') }}" width="45">
+      </div>
+      <div class="stat-box">
+        <div>
+          <div class="value">{{ total_user }}</div>
+          <div class="text">User</div>
+        </div>
+        <img src="{{ url_for('static', filename='icons/user.gif') }}" width="45">
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-box pie-box">
+        <h4>Distribusi Obat</h4>
+        <canvas id="pieChart"></canvas>
+      </div>
+      
+      <div class="chart-box bar-box">
+        <h4>Daftar Obat Kadaluarsa</h4>
+        <table style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>Nama Obat</th>
+              <th>Kadaluarsa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obat in obat_kadaluarsa_list %}
+            <tr>
+              <td>{{ obat.nama }}</td>
+              <td>{{ obat.tanggal_kadaluarsa.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      
+        <h4 style="margin-top: 40px;">Top Pemakaian Obat</h4>
+        <canvas id="barChart"></canvas>
+      </div>
+
+      <div class="chart-box table-box">
+        <h4>Daftar Obat Habis</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Obat</th>
+              <th>Stok</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obat in obat_habis_list %}
+            <tr>
+              <td>{{ obat.nama }}</td>
+              <td>{{ obat.stok }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pieChart = new Chart(document.getElementById('pieChart'), {
+      type: 'pie',
+      data: {
+        labels: {{ pie_labels | tojson }},
+        datasets: [{
+          data: {{ pie_values | tojson }},
+          backgroundColor: ['#f44336', '#ff9800', '#4caf50'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+
+    const barChart = new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: {
+        labels: {{ bar_labels | tojson }},
+        datasets: [{
+          label: 'Obat Terpakai',
+          data: {{ bar_values | tojson }},
+          backgroundColor: '#2196F3'
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        scales: {
+          x: { beginAtZero: true }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

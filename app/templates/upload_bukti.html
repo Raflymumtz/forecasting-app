@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Bukti Pembayaran</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f2f2f2;
+        }
+
+        .sidebar {
+            width: 200px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            height: 100vh;
+            padding: 15px;
+            position: fixed;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 10px;
+            margin: 5px 0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .sidebar a.active,
+        .sidebar a:hover {
+            background-color: #cce0ff;
+        }
+
+        .logout {
+            margin-top: 30px;
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: crimson;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .content {
+            margin-left: 200px;
+            padding: 30px;
+        }
+
+        .upload-box {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h2, h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #007bff;
+            border: none;
+            padding: 10px 16px;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .qr-image {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .qr-image img {
+            width: 220px;
+            height: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <h2>Menu</h2>
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    {% if current_user.role.name == 'pasien' %}
+        <a class="active" href="{{ url_for('pembelian.index') }}">Pembelian</a>
+    {% endif %}
+    <a href="{{ url_for('auth.logout') }}" class="logout">Logout</a>
+</div>
+
+<!-- Main Content -->
+<div class="content">
+    <div class="upload-box">
+        <h2>Upload Bukti Pembayaran</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <p>Silakan unggah bukti pembayaran untuk Resep ID: <strong>{{ resep_id }}</strong></p>
+            <input type="file" name="bukti" accept="image/*" required>
+            <button type="submit">Upload</button>
+        </form>
+
+        <div class="qr-image">
+            <h3>Pembayaran via QRIS</h3>
+            <p>Scan QR code di bawah ini untuk melakukan pembayaran:</p>
+            <img src="{{ url_for('static', filename='qr/qris.png') }}" alt="QRIS">
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

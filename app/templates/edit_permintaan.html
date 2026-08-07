@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Permintaan Obat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Edit Permintaan Obat</h2>
+        <form method="POST">
+            <label for="nama_peminta">Nama Peminta:</label>
+            <input type="text" name="nama_peminta" value="{{ permintaan.nama_peminta }}" required>
+
+            <label for="obat_id">Obat:</label>
+            <select name="obat_id" id="obatSelect" onchange="setMaxJumlah()" required>
+                {% for o in obats %}
+                <option value="{{ o.id }}" data-stok="{{ o.stok }}" {% if o.id == permintaan.obat_id %}selected{% endif %}>
+                    {{ o.nama }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <label for="jumlah">Jumlah:</label>
+            <input type="number" name="jumlah" id="jumlahInput" value="{{ permintaan.jumlah }}" min="1" required oninput="validateJumlah()">
+
+            <label for="tanggal">Tanggal Permintaan:</label>
+            <input type="date" name="tanggal" value="{{ permintaan.tanggal.strftime('%Y-%m-%d') }}" required>
+
+            <label for="status">Status:</label>
+            <select name="status" required>
+                <option value="menunggu" {% if permintaan.status == 'menunggu' %}selected{% endif %}>Menunggu</option>
+                <option value="disetujui" {% if permintaan.status == 'disetujui' %}selected{% endif %}>Disetujui</option>
+                <option value="ditolak" {% if permintaan.status == 'ditolak' %}selected{% endif %}>Ditolak</option>
+            </select>
+
+            <button type="submit">Simpan</button>
+        </form>
+    </div>
+
+    <script>
+        let maxStok = null;
+
+        function setMaxJumlah() {
+            const select = document.getElementById('obatSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            maxStok = parseInt(selectedOption.getAttribute('data-stok'));
+
+            const jumlahInput = document.getElementById('jumlahInput');
+            jumlahInput.max = maxStok;
+            jumlahInput.setCustomValidity('');
+        }
+
+        function validateJumlah() {
+            const jumlahInput = document.getElementById('jumlahInput');
+            const value = parseInt(jumlahInput.value);
+
+            if (maxStok !== null && value > maxStok) {
+                jumlahInput.setCustomValidity(`Permintaan melebihi batas stok (maksimal: ${maxStok})`);
+            } else {
+                jumlahInput.setCustomValidity('');
+            }
+
+            jumlahInput.reportValidity();
+        }
+
+        // Set stok awal saat halaman dibuka
+        window.onload = function () {
+            setMaxJumlah();
+        };
+    </script>
+</body>
+</html>

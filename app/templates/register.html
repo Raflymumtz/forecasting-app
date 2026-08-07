@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+    <style>
+        /* RESET */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+/* CONTAINER */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 60px;
+}
+
+/* LOGO */
+.logo {
+  margin-bottom: 10px;
+}
+
+.logo img {
+  width: 420px;
+  height: auto;
+}
+
+/* REGISTER BOX */
+.login-box {
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 30px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+/* JUDUL */
+.login-box h4 {
+  color: #28a745;
+  font-size: 18px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* LABEL */
+label {
+  font-weight: bold;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* INPUT FIELD */
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background-color: #eaf2ff;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+/* TOMBOL */
+button.btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #28a745;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  margin-top: 10px;
+}
+
+button.btn:hover {
+  background-color: #1e7e34;
+}
+
+/* LINK */
+.link {
+  margin-top: 12px;
+  display: block;
+  text-align: center;
+  color: #0096f4;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* FOOTER */
+.footer-links {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+}
+
+.footer-links a {
+  color: #888;
+  text-decoration: none;
+  margin: 0 5px;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* ALERT */
+.alert {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* ini yang memastikan vertikal center */
+  gap: 10px; /* beri jarak antara teks dan logo */
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: bold;
+  white-space: nowrap;
+  margin: 0;
+}
+
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="sidebar-header">
+    <span class="sidebar-title">RSIA HARAPAN BANGSA</span>
+    <img src="{{ url_for('static', filename='icons/rs.gif') }}" width="40">
+  </div>
+
+    <div class="login-box">
+        <h4>Buat akun baru</h4>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit" class="btn">Daftar</button>
+        </form>
+
+        <a href="{{ url_for('auth.login') }}" class="link">Kembali ke Login</a>
+    </div>
+
+    <div class="footer-links">
+        <a href="#">Ketentuan Penggunaan</a> |
+        <a href="#">Kebijakan Privasi</a>
+    </div>
+</div>
+
+</body>
+</html>
