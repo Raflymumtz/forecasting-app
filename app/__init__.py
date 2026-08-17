@@ -11,6 +11,11 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
 
+    # Filter Jinja: ubah nilai MAPE menjadi kategori Tabel 2.1
+    from app.forecasting import kategori_mape
+
+    app.add_template_filter(kategori_mape, "kategori")
+
     from app.models import User  # Masih diperlukan untuk user loader
 
     @login_manager.user_loader

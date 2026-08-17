@@ -78,12 +78,35 @@ class ResepItem(db.Model):
     penggunaan = db.relationship('PenggunaanObat', back_populates='resep_items')
 
 class ForecastResult(db.Model):
+    """Hasil peramalan DES yang disimpan permanen (lihat seed_forecast.py).
+
+    Satu baris = hasil peramalan satu obat pada satu kali perhitungan, lengkap
+    dengan parameter dan nilai evaluasi seperti Tabel 4.6 dan 4.8 Bab IV.
+    """
     id = db.Column(db.Integer, primary_key=True)
     obat_id = db.Column(db.Integer, db.ForeignKey('obat.id'), nullable=False)
     tanggal = db.Column(db.DateTime, default=datetime.utcnow)
-    hasil = db.Column(db.Float, nullable=False)
+    hasil = db.Column(db.Float, nullable=False)          # ramalan periode berikutnya
 
-    obat = db.relationship('Obat', backref='forecast_results')
+    periode = db.Column(db.Integer)                       # periode yang diramalkan
+    tanggal_ramalan = db.Column(db.Date)                  # perkiraan tanggal periode tsb
+    alpha = db.Column(db.Float)
+    beta = db.Column(db.Float)
+    mad = db.Column(db.Float)
+    mse = db.Column(db.Float)
+    mape = db.Column(db.Float)
+    kategori = db.Column(db.String(20))
+    rata_historis = db.Column(db.Float)
+    n_latih = db.Column(db.Integer)
+    n_uji = db.Column(db.Integer)
+    obat_acuan_id = db.Column(
+        db.Integer,
+        db.ForeignKey('obat.id', name='fk_forecast_obat_acuan'),
+        nullable=True
+    )  # diisi bila obat ini memakai hasil obat lain yang datanya identik
+
+    obat = db.relationship('Obat', foreign_keys=[obat_id], backref='forecast_results')
+    obat_acuan = db.relationship('Obat', foreign_keys=[obat_acuan_id])
 
 class Pembelian(db.Model):
     id = db.Column(db.Integer, primary_key=True)
