@@ -2,6 +2,10 @@ venv/
 venv_new/
 __pycache__/
 *.pyc
-*.sqlite3
-instance/
 .env
+
+# Isi folder instance diabaikan, KECUALI database yang sengaja disertakan
+# agar di laptop baru data (obat, penggunaan, hasil peramalan, data contoh)
+# langsung tersedia tanpa perlu menjalankan migrasi dan seed.
+instance/*
+!instance/db.sqlite3

@@ -1,0 +1,255 @@
+{% extends "_peramalan_base.html" %}
+{% block title %}Rekap Peramalan Seluruh Obat{% endblock %}
+
+{% macro badge(kategori) -%}
+  <span class="badge badge-{{ kategori | lower | replace(' ', '-') }}">{{ kategori }}</span>
+{%- endmacro %}
+
+{% block content %}
+<h2>Rekap Peramalan Seluruh Obat</h2>
+<p class="subjudul">
+  Ringkasan hasil Bab IV untuk seluruh obat yang memiliki data penggunaan.
+  <a href="{{ url_for('peramalan.index') }}">&laquo; kembali ke perhitungan per obat</a>
+</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'info' }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+{% if not tabel_41 %}
+  <div class="alert alert-danger">
+    Belum ada obat dengan data penggunaan yang cukup. Jalankan
+    <code>python seed_obat.py</code> terlebih dahulu.
+  </div>
+{% else %}
+
+<!-- Tabel 4.1 -->
+<h3>Tabel 4.1 &mdash; Statistik Deskriptif Penggunaan Mingguan</h3>
+<p class="subjudul">Dihitung dari seluruh periode penggunaan (tidak termasuk periode ke-0 / nilai awal L0).</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>No.</th><th class="kiri">Nama Obat</th><th>n</th><th>Min</th><th>Maks</th>
+          <th>Rata-rata</th><th>Std. Dev.</th><th class="kiri">Keterangan</th></tr>
+    </thead>
+    <tbody>
+      {% for r in tabel_41 %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="kiri">{{ r.nama }}</td>
+        <td>{{ r.stat.n }}</td>
+        <td>{{ r.stat.min | int }}</td>
+        <td>{{ r.stat.maks | int }}</td>
+        <td>{{ '%.2f' | format(r.stat.rata) }}</td>
+        <td>{{ '%.2f' | format(r.stat.std) }}</td>
+        <td class="kiri">{{ r.keterangan }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Tabel 4.2 -->
+<h3>Tabel 4.2 &mdash; Verifikasi Pasangan Obat dengan Data Mingguan Identik</h3>
+<p class="subjudul">Dua obat dianggap identik bila seluruh nilai penggunaan mingguannya sama persis.</p>
+{% if tabel_42 %}
+<table>
+  <thead>
+    <tr><th>No.</th><th class="kiri">Obat dengan Data Identik</th>
+        <th class="kiri">Sama dengan Data Obat</th><th>Jumlah Selisih</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    {% for r in tabel_42 %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td class="kiri">{{ r.nama }}</td>
+      <td class="kiri">{{ r.sama_dengan }}</td>
+      <td>0</td>
+      <td>Identik</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <div class="alert alert-info">Tidak ada pasangan obat dengan data penggunaan identik.</div>
+{% endif %}
+
+<!-- Tabel 4.3 -->
+{% if pembagian %}
+<h3>Tabel 4.3 &mdash; Hasil Pembagian Data Latih dan Data Uji</h3>
+<table>
+  <thead>
+    <tr><th class="kiri">Kelompok Data</th><th>Proporsi</th><th>Periode ke-</th>
+        <th>Rentang Tanggal</th><th>Jumlah Minggu</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="kiri">Data Latih (Training)</td>
+      <td>{{ pembagian.persen_latih }}%</td>
+      <td>{{ pembagian.periode_latih }}</td>
+      <td>{{ pembagian.tanggal_latih }}</td>
+      <td>{{ pembagian.n_latih }}</td>
+    </tr>
+    <tr>
+      <td class="kiri">Data Uji (Testing)</td>
+      <td>{{ pembagian.persen_uji }}%</td>
+      <td>{{ pembagian.periode_uji }}</td>
+      <td>{{ pembagian.tanggal_uji }}</td>
+      <td>{{ pembagian.n_uji }}</td>
+    </tr>
+    <tr>
+      <td class="kiri"><strong>Total</strong></td>
+      <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+      <td><strong>{{ pembagian.n_total }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+{% endif %}
+
+<!-- Tabel 4.6 -->
+<h3>Tabel 4.6 &mdash; Ringkasan Kombinasi Parameter Terbaik (Obat dengan Data Unik)</h3>
+<p class="subjudul">Hasil pencarian 81 kombinasi &alpha; &times; &beta; (0,1 s.d. 0,9), dipilih berdasarkan MAPE terkecil pada data uji.</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>No.</th><th class="kiri">Nama Obat</th><th>&alpha; Terbaik</th><th>&beta; Terbaik</th>
+          <th>MAD</th><th>MSE</th><th>MAPE (%)</th><th>Kategori</th></tr>
+    </thead>
+    <tbody>
+      {% for r in tabel_46 %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="kiri">{{ r.nama }}</td>
+        <td>{{ '%.1f' | format(r.alpha) }}</td>
+        <td>{{ '%.1f' | format(r.beta) }}</td>
+        <td>{{ '%.4f' | format(r.mad) }}</td>
+        <td>{{ '%.4f' | format(r.mse) }}</td>
+        <td>{{ '%.4f' | format(r.mape) }}</td>
+        <td>{{ badge(r.kategori) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Tabel 4.7 -->
+{% if tabel_47 %}
+<h3>Tabel 4.7 &mdash; Hasil Evaluasi Obat dengan Data Identik</h3>
+<p class="subjudul">DES bersifat deterministik, sehingga obat dengan deret input identik menghasilkan evaluasi yang sama dengan pasangannya.</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>No.</th><th class="kiri">Nama Obat</th><th class="kiri">Mengacu pada Obat</th>
+          <th>&alpha;</th><th>&beta;</th><th>MAD</th><th>MAPE (%)</th><th>Kategori</th></tr>
+    </thead>
+    <tbody>
+      {% for r in tabel_47 %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="kiri">{{ r.nama }}</td>
+        <td class="kiri">{{ r.acuan }}</td>
+        <td>{{ '%.1f' | format(r.alpha) }}</td>
+        <td>{{ '%.1f' | format(r.beta) }}</td>
+        <td>{{ '%.4f' | format(r.mad) }}</td>
+        <td>{{ '%.4f' | format(r.mape) }}</td>
+        <td>{{ badge(r.kategori) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Tabel 4.8 -->
+<h3>Tabel 4.8 &mdash; Prediksi Kebutuhan Periode Berikutnya vs Rata-rata Historis</h3>
+<p class="subjudul">Kolom "Stok Saat Ini" diambil dari data master obat sebagai pembanding kebutuhan.</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>No.</th><th class="kiri">Nama Obat</th><th>Rata-rata Historis</th>
+          <th>Prediksi Periode ke-{{ tabel_48[0].periode if tabel_48 }}</th>
+          <th>Selisih</th><th>Stok Saat Ini</th><th>Kategori MAPE</th></tr>
+    </thead>
+    <tbody>
+      {% for r in tabel_48 %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="kiri">{{ r.nama }}</td>
+        <td>{{ '%.4f' | format(r.rata) }}</td>
+        <td>{{ '%.4f' | format(r.prediksi) }}</td>
+        <td style="color: {% if r.selisih < 0 %}#c0392b{% else %}#1e8449{% endif %}">
+          {{ '%+.4f' | format(r.selisih) }}
+        </td>
+        <td>{{ r.stok }}</td>
+        <td>{{ badge(r.kategori) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Hasil tersimpan di database -->
+<h3>Hasil Peramalan yang Tersimpan di Database</h3>
+<p class="subjudul">
+  Tabel di atas dihitung ulang setiap halaman dibuka. Tabel ini adalah hasil yang
+  disimpan permanen di tabel <code>forecast_result</code>.
+  {% if waktu_simpan %}
+    Terakhir disimpan: <strong>{{ waktu_simpan.strftime('%d/%m/%Y %H:%M') }} UTC</strong>.
+  {% else %}
+    Belum ada hasil yang tersimpan.
+  {% endif %}
+</p>
+
+<form method="POST" action="{{ url_for('peramalan.simpan') }}" style="margin-bottom:10px;">
+  <button type="submit"
+          style="padding:8px 14px;background:#007bff;color:#fff;border:none;border-radius:3px;cursor:pointer;">
+    Hitung Ulang &amp; Simpan ke Database
+  </button>
+</form>
+
+{% if tersimpan %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>No.</th><th class="kiri">Nama Obat</th><th class="kiri">Acuan</th>
+          <th>&alpha;</th><th>&beta;</th><th>MAD</th><th>MSE</th><th>MAPE (%)</th>
+          <th>Kategori</th><th>Periode</th><th>Perkiraan Tanggal</th><th>Hasil Ramalan</th></tr>
+    </thead>
+    <tbody>
+      {% for t in tersimpan %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="kiri">{{ t.obat.nama }}</td>
+        <td class="kiri">{{ t.obat_acuan.nama if t.obat_acuan else '&mdash;' | safe }}</td>
+        <td>{{ '%.1f' | format(t.alpha) }}</td>
+        <td>{{ '%.1f' | format(t.beta) }}</td>
+        <td>{{ '%.4f' | format(t.mad) }}</td>
+        <td>{{ '%.4f' | format(t.mse) }}</td>
+        <td>{{ '%.4f' | format(t.mape) }}</td>
+        <td>{{ badge(t.kategori) }}</td>
+        <td>{{ t.periode }}</td>
+        <td>{{ t.tanggal_ramalan.strftime('%d/%m/%Y') if t.tanggal_ramalan else '&mdash;' | safe }}</td>
+        <td><strong>{{ '%.4f' | format(t.hasil) }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Tabel 2.1 -->
+<h3>Tabel 2.1 &mdash; Kategori Nilai MAPE</h3>
+<table>
+  <thead><tr><th>Rentang MAPE</th><th>Kategori</th></tr></thead>
+  <tbody>
+    <tr><td>&lt; 10%</td><td>{{ badge('Sangat Baik') }}</td></tr>
+    <tr><td>10% &ndash; 20%</td><td>{{ badge('Baik') }}</td></tr>
+    <tr><td>20% &ndash; 50%</td><td>{{ badge('Cukup') }}</td></tr>
+    <tr><td>&gt; 50%</td><td>{{ badge('Buruk') }}</td></tr>
+  </tbody>
+</table>
+
+{% endif %}
+{% endblock %}

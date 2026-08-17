@@ -1,418 +1,285 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <title>Peramalan Stok Obat</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-    }
-  
-    /* SIDEBAR */
-    .sidebar {
-      width: 200px;
-      background-color: #ffffff;
-      height: 100vh;
-      border-right: 1px solid #ccc;
-      padding-top: 0;
-    }
+{% extends "_peramalan_base.html" %}
+{% block title %}Peramalan Stok Obat{% endblock %}
 
-    .sidebar-header {
-      background-color: #fdfdfd;
-      padding: 20px 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+{% macro badge(kategori) -%}
+  <span class="badge badge-{{ kategori | lower | replace(' ', '-') }}">{{ kategori }}</span>
+{%- endmacro %}
 
-    .sidebar-logo-only {
-      width: 200px;        /* Sesuaikan ukuran */
-      height: auto;
-      display: block;
-    }
+{% block content %}
+<h2>Peramalan Persediaan Obat &mdash; Double Exponential Smoothing</h2>
+<p class="subjudul">
+  Perhitungan mengikuti Bab IV: inisialisasi L0 dari periode ke-0 dan T0 = 0,
+  pencarian 81 kombinasi &alpha; &times; &beta; (0,1 s.d. 0,9), serta evaluasi
+  MAD/MSE/MAPE pada 20% data uji.
+</p>
 
-    .sidebar-logo {
-      width: 28px;
-      height: auto;
-    }
-
-    .sidebar-title {
-      font-size: 16px;
-      font-weight: bold;
-      white-space: nowrap; /* mencegah teks terpotong */
-    }
-  
-    .sidebar h2 {
-      text-align: center;
-      font-size: 18px;
-      margin: 0 0 15px 0;
-    }
-  
-    .sidebar a {
-      display: block;
-      padding: 12px 20px;
-      color: #333;
-      text-decoration: none;
-    }
-  
-    .sidebar a.active,
-    .sidebar a:hover {
-      background: #dceeff;
-    }
-  
-    .logout {
-      background: #dc3545;
-      color: white !important;
-      text-align: center;
-      display: inline-block;
-      padding: 10px;
-      margin-top: 30px;
-      border-radius: 5px;
-      text-decoration: none;
-    }
-  
-    /* MAIN CONTENT */
-    .content, .main {
-      padding: 20px;
-      flex-grow: 1;
-    }
-  
-    h2 {
-      margin-top: 0;
-    }
-  
-    .header {
-      font-size: 22px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-  
-    /* STAT BOX */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-      margin-bottom: 30px;
-    }
-  
-    .stat-box {
-      background-color: #ffffff;
-      color: #000;
-      padding: 15px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border: 1px solid #ccc;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-  
-    .stat-box .value {
-      font-size: 20px;
-      font-weight: bold;
-    }
-  
-    .stat-box .text {
-      font-size: 14px;
-    }
-  
-    /* FORMS */
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-  
-    .form-row input,
-    .form-row select {
-      padding: 8px;
-      width: 180px;
-    }
-  
-    .form-row button,
-    .add-btn {
-      padding: 8px 12px;
-      background: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 3px;
-    }
-  
-    /* TABEL */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      margin-top: 20px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-  
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-  
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-      vertical-align: middle;
-    }
-  
-    a {
-      color: #007bff;
-      text-decoration: none;
-    }
-  
-    a:hover {
-      text-decoration: underline;
-    }
-  
-    /* CHARTS */
-    .chart-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-  
-    .chart-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      flex-direction: column;
-    }
-  
-    canvas {
-      width: 100% !important;
-      height: 300px !important;
-    }
-  
-    /* ALERT */
-    .alert {
-      margin-bottom: 20px;
-      padding: 10px;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-  
-    .alert-success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-  
-    .alert-danger {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-  
-    .alert-warning {
-      background-color: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeeba;
-    }
-  </style>
-  
-</head>
-<body>
-
-<!-- Sidebar -->
-<div class="sidebar">
-  <div class="sidebar-header">
-    <span class="sidebar-title">RSIA</span>
-    <img src="{{ url_for('static', filename='icons/rs.gif') }}" width="40">
+<form method="POST">
+  <div class="form-row">
+    <select name="obat_id" required>
+      <option value="">-- Pilih Obat --</option>
+      {% for o in obats %}
+        <option value="{{ o.id }}" {% if selected_obat_id == o.id %}selected{% endif %}>{{ o.nama }}</option>
+      {% endfor %}
+    </select>
+    <select name="n_weeks">
+      {% for opt in pilihan_minggu %}
+        <option value="{{ opt }}" {% if n_weeks == opt %}selected{% endif %}>{{ opt }} minggu ke depan</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Proses Peramalan</button>
+    <a href="{{ url_for('peramalan.rekap') }}">Lihat rekap seluruh obat &raquo;</a>
   </div>
-  <a href="{{ url_for('dashboard.index') }}" class="{% if request.endpoint.startswith('dashboard') %}active{% endif %}">Dashboard</a>
+</form>
 
-  {% if current_user.role.name == 'admin' %}
-    <a href="{{ url_for('user.index') }}">User</a>
-    <a href="{{ url_for('role.index') }}">Hak Akses</a>
-    <a href="{{ url_for('obat.index') }}">Obat</a>
-    <a href="{{ url_for('permintaan.index') }}">Permintaan</a>
-    <a href="{{ url_for('penggunaan.index') }}">Penggunaan Obat</a>
-    <a href="{{ url_for('resep.index') }}">Resep</a>
-    <a class="active" href="{{ url_for('peramalan.index') }}">Peramalan</a>
+{% if pesan %}
+  <div class="alert alert-warning">{{ pesan }}</div>
+{% endif %}
+
+{% if not obats %}
+  <div class="alert alert-danger">
+    Belum ada obat dengan data penggunaan yang cukup. Jalankan
+    <code>python seed_obat.py</code> untuk memuat data mingguan 2023&ndash;2024,
+    atau tambahkan data lewat menu <em>Penggunaan Obat</em>.
+  </div>
+{% endif %}
+
+{% if hasil %}
+
+  {% if hasil.kembar %}
+    <div class="alert alert-info">
+      Deret penggunaan obat ini identik dengan:
+      <strong>{{ hasil.kembar | join(', ') }}</strong>.
+      Karena DES bersifat deterministik, hasil peramalannya juga sama persis
+      (lihat Tabel 4.2 dan 4.7 pada rekap).
+    </div>
   {% endif %}
 
-  <a href="{{ url_for('auth.logout') }}" class="logout">Logout</a>
-</div>
+  <h3>Ringkasan Hasil &mdash; {{ hasil.obat.nama }}</h3>
+  <p class="subjudul">Parameter terbaik dan evaluasi pada data uji ({{ hasil.pembagian.n_uji }} periode terakhir).</p>
 
-<!-- Main Content -->
-<div class="main">
-  <h2>Peramalan Stok Obat</h2>
-
-  <form method="POST">
-    <div class="form-row">
-      <select name="obat_id" required>
-        <option value="">Pilih Obat</option>
-        {% for o in obats %}
-          <option value="{{ o.id }}" {% if selected_obat_id == o.id %}selected{% endif %}>{{ o.nama }}</option>
-        {% endfor %}
-      </select>
-      <select name="n_weeks">
-        {% for opt in [1, 4, 8, 12, 24, 52] %}
-          <option value="{{ opt }}" {% if n_weeks == opt %}selected{% endif %}>{{ opt }} minggu ke depan</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Proses</button>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="text">Alpha (&alpha;) terbaik</div>
+      <div class="value">{{ '%.1f' | format(hasil.alpha) }}</div>
     </div>
-  </form>
-
-  {% if hasil %}
-    {% if hasil.low_data %}
-      <div class="alert alert-warning">
-        Data penggunaan untuk obat ini masih sedikit ({{ hasil.data | length }} titik). Hasil peramalan mungkin kurang akurat — tambahkan lebih banyak data penggunaan untuk meningkatkan keandalan model.
-      </div>
-    {% endif %}
-
-    <!-- Grafik Forecast di atas -->
-    <div class="chart-box" style="height: 420px; padding: 20px 10px;">
-      <canvas id="forecastChart"></canvas>
+    <div class="stat-box">
+      <div class="text">Beta (&beta;) terbaik</div>
+      <div class="value">{{ '%.1f' | format(hasil.beta) }}</div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-      const historicalLabels = {{ hasil_data | map(attribute='tanggal') | list | tojson }};
-      const historicalActual = {{ hasil_data | map(attribute='jumlah') | list | tojson }};
-      const historicalFits = {{ hasil_data | map(attribute='S1') | list | tojson }};
-      const forecastLabels = {{ hasil.forecast_data | map(attribute='tanggal') | list | tojson }};
-      const forecastValues = {{ hasil.forecast_data | map(attribute='jumlah') | list | tojson }};
+    <div class="stat-box">
+      <div class="text">MAD</div>
+      <div class="value">{{ '%.4f' | format(hasil.mad) }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="text">MSE</div>
+      <div class="value">{{ '%.4f' | format(hasil.mse) }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="text">MAPE</div>
+      <div class="value">{{ '%.4f' | format(hasil.mape) }}%</div>
+    </div>
+    <div class="stat-box">
+      <div class="text">Kategori (Tabel 2.1)</div>
+      <div class="value">{{ badge(hasil.kategori) }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="text">Prediksi periode ke-{{ hasil.pembagian.n_total + 1 }}</div>
+      <div class="value">{{ '%.2f' | format(hasil.prediksi_berikutnya) }}</div>
+    </div>
+    <div class="stat-box">
+      <div class="text">Rata-rata historis ({{ hasil.pembagian.n_total }} periode)</div>
+      <div class="value">{{ '%.2f' | format(hasil.deskriptif.rata) }}</div>
+    </div>
+  </div>
 
-      const labels = historicalLabels.concat(forecastLabels);
+  <div class="rumus">
+    L<sub>0</sub> = {{ '%.4f' | format(hasil.l0) }} &nbsp;&nbsp; T<sub>0</sub> = {{ '%.4f' | format(hasil.t0) }}<br>
+    Level<sub>t</sub> = &alpha;&middot;Aktual<sub>t</sub> + (1&minus;&alpha;)&middot;(Level<sub>t&minus;1</sub> + Tren<sub>t&minus;1</sub>)<br>
+    Tren<sub>t</sub> = &beta;&middot;(Level<sub>t</sub> &minus; Level<sub>t&minus;1</sub>) + (1&minus;&beta;)&middot;Tren<sub>t&minus;1</sub><br>
+    Ramalan<sub>t</sub> = Level<sub>t&minus;1</sub> + Tren<sub>t&minus;1</sub> &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+    Ramalan<sub>n+m</sub> = Level<sub>n</sub> + m&middot;Tren<sub>n</sub>
+  </div>
 
-      const actualData = historicalActual.concat(Array(forecastLabels.length).fill(null));
-      const fitsData = historicalFits.concat(Array(forecastLabels.length).fill(null));
+  <!-- Grafik -->
+  <h3>Grafik Aktual, Ramalan dan Proyeksi</h3>
+  <div class="chart-box">
+    <canvas id="forecastChart"></canvas>
+  </div>
 
-      // Sambungkan garis forecast (putus-putus) dari titik fit terakhir
-      const lastFit = historicalFits.length ? historicalFits[historicalFits.length - 1] : null;
-      const forecastData = Array(Math.max(historicalLabels.length - 1, 0))
-        .fill(null)
-        .concat([lastFit])
-        .concat(forecastValues);
+  <!-- Tabel 4.1: statistik deskriptif -->
+  <h3>Statistik Deskriptif Penggunaan (Tabel 4.1)</h3>
+  <table>
+    <thead>
+      <tr><th>Nama Obat</th><th>n</th><th>Min</th><th>Maks</th><th>Rata-rata</th><th>Std. Dev.</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="kiri">{{ hasil.obat.nama }}</td>
+        <td>{{ hasil.deskriptif.n }}</td>
+        <td>{{ hasil.deskriptif.min | int }}</td>
+        <td>{{ hasil.deskriptif.maks | int }}</td>
+        <td>{{ '%.2f' | format(hasil.deskriptif.rata) }}</td>
+        <td>{{ '%.2f' | format(hasil.deskriptif.std) }}</td>
+      </tr>
+    </tbody>
+  </table>
 
-      const ctx = document.getElementById('forecastChart').getContext('2d');
-      const chart = new Chart(ctx, {
+  <!-- Tabel 4.3: pembagian data -->
+  <h3>Pembagian Data Latih dan Data Uji (Tabel 4.3)</h3>
+  <table>
+    <thead>
+      <tr><th>Kelompok Data</th><th>Proporsi</th><th>Periode ke-</th><th>Rentang Tanggal</th><th>Jumlah Minggu</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="kiri">Data Latih (Training)</td>
+        <td>{{ hasil.pembagian.persen_latih }}%</td>
+        <td>{{ hasil.pembagian.periode_latih }}</td>
+        <td>{{ hasil.pembagian.tanggal_latih }}</td>
+        <td>{{ hasil.pembagian.n_latih }}</td>
+      </tr>
+      <tr>
+        <td class="kiri">Data Uji (Testing)</td>
+        <td>{{ hasil.pembagian.persen_uji }}%</td>
+        <td>{{ hasil.pembagian.periode_uji }}</td>
+        <td>{{ hasil.pembagian.tanggal_uji }}</td>
+        <td>{{ hasil.pembagian.n_uji }}</td>
+      </tr>
+      <tr>
+        <td class="kiri"><strong>Total</strong></td>
+        <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+        <td><strong>{{ hasil.pembagian.n_total }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Proyeksi ke depan -->
+  <h3>Proyeksi {{ hasil.n_periode_kedepan }} Periode ke Depan</h3>
+  <p class="subjudul">Ramalan<sub>n+m</sub> = Level<sub>n</sub> + m &middot; Tren<sub>n</sub>
+    (Level<sub>n</sub> = {{ '%.4f' | format(hasil.level_akhir) }},
+     Tren<sub>n</sub> = {{ '%.4f' | format(hasil.tren_akhir) }}).</p>
+  <table>
+    <thead>
+      <tr><th>Periode</th><th>Perkiraan Tanggal</th><th>Ramalan Kebutuhan</th><th>Pembulatan</th></tr>
+    </thead>
+    <tbody>
+      {% for p in hasil.proyeksi %}
+      <tr>
+        <td>{{ p.periode }}</td>
+        <td>{{ p.tanggal.strftime('%d/%m/%Y') }}</td>
+        <td>{{ '%.4f' | format(p.ramalan) }}</td>
+        <td><strong>{{ p.ramalan | round | int }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Tabel perhitungan DES -->
+  <h3>Perhitungan Double Exponential Smoothing (&alpha; = {{ '%.1f' | format(hasil.alpha) }}, &beta; = {{ '%.1f' | format(hasil.beta) }})</h3>
+  <p class="subjudul">
+    Baris berlatar biru = periode awal (L0/T0); baris berlatar kuning = data uji
+    yang dipakai menghitung MAD, MSE dan MAPE.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Periode</th><th>Minggu</th><th>Kelompok</th><th>Aktual</th>
+          <th>Level</th><th>Tren</th><th>Ramalan</th>
+          <th>Error</th><th>|Error|</th><th>Error&sup2;</th><th>APE (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in hasil.baris %}
+        <tr class="{% if b.kelompok == 'Uji' %}baris-uji{% elif b.periode == 0 %}baris-awal{% endif %}">
+          <td>{{ b.periode }}</td>
+          <td>{{ b.tanggal.strftime('%d/%m/%Y') }}</td>
+          <td>{{ b.kelompok }}</td>
+          <td>{{ b.aktual }}</td>
+          <td>{{ '%.4f' | format(b.level) }}</td>
+          <td>{{ '%.4f' | format(b.tren) }}</td>
+          <td>{% if b.ramalan is not none %}{{ '%.4f' | format(b.ramalan) }}{% else %}&mdash;{% endif %}</td>
+          <td>{% if b.error is not none %}{{ '%.4f' | format(b.error) }}{% else %}&mdash;{% endif %}</td>
+          <td>{% if b.abs_error is not none %}{{ '%.4f' | format(b.abs_error) }}{% else %}&mdash;{% endif %}</td>
+          <td>{% if b.sq_error is not none %}{{ '%.4f' | format(b.sq_error) }}{% else %}&mdash;{% endif %}</td>
+          <td>{% if b.ape is not none %}{{ '%.4f' | format(b.ape) }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Grid 81 kombinasi -->
+  <h3>Seluruh {{ hasil.kombinasi | length }} Kombinasi &alpha; &times; &beta;</h3>
+  <p class="subjudul">
+    Setiap kombinasi dievaluasi pada {{ hasil.pembagian.n_uji }} periode data uji.
+    Baris hijau adalah kombinasi dengan MAPE terkecil yang dipakai di atas.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>No.</th><th>Alpha (&alpha;)</th><th>Beta (&beta;)</th><th>MAD</th><th>MSE</th><th>MAPE (%)</th><th>Kategori</th></tr>
+      </thead>
+      <tbody>
+        {% for k in hasil.kombinasi %}
+        <tr class="{% if k.terbaik %}baris-terbaik{% endif %}">
+          <td>{{ loop.index }}</td>
+          <td>{{ '%.1f' | format(k.alpha) }}</td>
+          <td>{{ '%.1f' | format(k.beta) }}</td>
+          <td>{{ '%.4f' | format(k.mad) }}</td>
+          <td>{{ '%.4f' | format(k.mse) }}</td>
+          <td>{{ '%.4f' | format(k.mape) }}</td>
+          <td>{{ k.mape | kategori }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+  <script>
+    (function () {
+      if (typeof Chart === 'undefined') { return; }
+
+      const rows = {{ hasil.baris | map(attribute='tanggal') | map('string') | list | tojson }};
+      const aktual = {{ hasil.baris | map(attribute='aktual') | list | tojson }};
+      const ramalan = {{ hasil.baris | map(attribute='ramalan') | list | tojson }};
+      const projLabels = {{ hasil.proyeksi | map(attribute='tanggal') | map('string') | list | tojson }};
+      const projValues = {{ hasil.proyeksi | map(attribute='ramalan') | list | tojson }};
+
+      const labels = rows.concat(projLabels);
+      const pad = new Array(projLabels.length).fill(null);
+
+      // Sambungkan garis proyeksi dari titik ramalan terakhir
+      const proyeksi = new Array(rows.length - 1).fill(null)
+        .concat([ramalan[ramalan.length - 1]])
+        .concat(projValues);
+
+      new Chart(document.getElementById('forecastChart').getContext('2d'), {
         type: 'line',
         data: {
           labels: labels,
           datasets: [
-            {
-              label: 'Actual',
-              data: actualData,
-              borderColor: '#2563eb',
-              backgroundColor: '#2563eb',
-              borderWidth: 2,
-              pointRadius: 3,
-              tension: 0.3,
-              fill: false,
-              spanGaps: false
-            },
-            {
-              label: 'Fits',
-              data: fitsData,
-              borderColor: '#f59e0b',
-              backgroundColor: '#f59e0b',
-              borderWidth: 2,
-              pointRadius: 3,
-              tension: 0.3,
-              fill: false,
-              spanGaps: false
-            },
-            {
-              label: 'Forecast ({{ hasil.n_weeks }} Minggu)',
-              data: forecastData,
-              borderColor: '#16a34a',
-              backgroundColor: '#16a34a',
-              borderWidth: 2,
-              borderDash: [6, 4],
-              pointRadius: 3,
-              tension: 0.3,
-              fill: false,
-              spanGaps: false
-            }
+            { label: 'Aktual', data: aktual.concat(pad), borderColor: '#2563eb',
+              backgroundColor: '#2563eb', borderWidth: 2, pointRadius: 0, tension: 0.25, fill: false },
+            { label: 'Ramalan (1 langkah)', data: ramalan.concat(pad), borderColor: '#f59e0b',
+              backgroundColor: '#f59e0b', borderWidth: 2, pointRadius: 0, tension: 0.25, fill: false },
+            { label: 'Proyeksi {{ hasil.n_periode_kedepan }} periode', data: proyeksi, borderColor: '#16a34a',
+              backgroundColor: '#16a34a', borderWidth: 2, borderDash: [6, 4], pointRadius: 3, tension: 0.25, fill: false }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { position: 'top', labels: { usePointStyle: true } },
-            tooltip: { mode: 'index', intersect: false }
-          },
+          plugins: { legend: { position: 'top' } },
           scales: {
-            x: {
-              title: { display: true, text: 'Tanggal' },
-              grid: { color: '#eee' }
-            },
-            y: {
-              title: { display: true, text: 'Jumlah' },
-              beginAtZero: true,
-              grid: { color: '#eee' }
-            }
+            x: { title: { display: true, text: 'Minggu' }, ticks: { maxTicksLimit: 14 } },
+            y: { title: { display: true, text: 'Jumlah Penggunaan' }, beginAtZero: true }
           }
         }
       });
-    </script>
-
-    <!-- Statistik Parameter -->
-    <div class="alert alert-success">
-      <p>
-        <strong>α:</strong> {{ hasil.alpha }},
-        <strong>β:</strong> {{ hasil.beta }},
-        <strong>MAPE:</strong> {{ hasil.mape }}%,
-        <strong>MAD:</strong> {{ hasil.mad }},
-        <strong>MSD:</strong> {{ hasil.msd }}
-      </p>
-    </div>
-
-    <h3>Hasil Peramalan untuk: <em>{{ hasil.obat }}</em></h3>
-    <p>Perkiraan kebutuhan periode berikutnya: <strong>{{ hasil.forecast }}</strong> unit</p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Tanggal</th>
-          <th>Jumlah</th>
-          <th>Fits</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in hasil.data %}
-        <tr>
-          <td>{{ row.tanggal }}</td>
-          <td>{{ row.jumlah }}</td>
-          <td>{{ row.S1 | round(2) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <h3 style="margin-top: 30px;">Perkiraan {{ hasil.n_weeks }} Periode ke Depan</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Tanggal</th>
-          <th>Perkiraan Jumlah</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in hasil.forecast_data %}
-        <tr>
-          <td>{{ row.tanggal }}</td>
-          <td>{{ row.jumlah }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% endif %}
-</div>
-
-</body>
-</html>
+    })();
+  </script>
+{% endif %}
+{% endblock %}
